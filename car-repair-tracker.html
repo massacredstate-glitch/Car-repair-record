@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Car Maintenance Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0a0a;
+      --surface:  #111111;
+      --border:   #222222;
+      --accent:   #e8ff00;
+      --accent2:  #00e5ff;
+      --accent3:  #ff6b35;
+      --muted:    #444444;
+      --text:     #e0e0e0;
+      --danger:   #ff3b3b;
+      --mono:     'Share Tech Mono', monospace;
+      --sans:     'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      padding: 40px 24px 80px;
+    }
+
+    .app-header {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    .app-header h1 {
+      font-size: clamp(1.4rem, 3vw, 2.2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .app-header h1 span { color: var(--accent); }
+    .app-header .subtitle {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .tab-nav {
+      max-width: 1080px;
+      margin: 32px auto 0;
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 12px 24px 10px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      margin-bottom: -1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active[data-tab="repairs"]  { color: var(--accent);  border-color: var(--accent); }
+    .tab-btn.active[data-tab="services"] { color: var(--accent2); border-color: var(--accent2); }
+    .tab-btn.active[data-tab="tools"]    { color: var(--accent3); border-color: var(--accent3); }
+    .tab-pip { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.5; }
+    .tab-btn.active .tab-pip { opacity: 1; }
+
+    .page { display: none; padding-top: 40px; }
+    .page.active { display: block; }
+
+    .summary-bar {
+      max-width: 1080px;
+      margin: 0 auto 40px;
+      display: flex;
+      gap: 32px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .summary-stat .val {
+      font-family: var(--mono);
+      font-size: 1.6rem;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .summary-stat.cyan .val  { color: var(--accent2); }
+    .summary-stat.orange .val { color: var(--accent3); }
+    .summary-stat .lbl {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .form-card {
+      max-width: 1080px;
+      margin: 0 auto 40px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 28px 32px;
+    }
+    .form-card h2 {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 22px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field.wide { grid-column: 1 / -1; }
+
+    label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    input, textarea, select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+      appearance: none;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    textarea { resize: vertical; min-height: 68px; }
+    select option { background: #1a1a1a; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 11px 26px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary.cyan   { background: var(--accent2); }
+    .btn-primary.orange { background: var(--accent3); }
+
+    .btn-secondary {
+      background: none;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+
+    .controls {
+      max-width: 1080px;
+      margin: 0 auto 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .controls input { flex: 1; min-width: 160px; max-width: 280px; }
+    .controls select { background: var(--surface); width: auto; cursor: pointer; font-size: 0.78rem; }
+    .rec-count { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin-left: auto; }
+
+    .table-wrap { max-width: 1080px; margin: 0 auto; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.8rem; }
+    thead tr { border-bottom: 1px solid var(--accent); }
+    thead.cyan tr   { border-color: var(--accent2); }
+    thead.orange tr { border-color: var(--accent3); }
+
+    th {
+      text-align: left;
+      font-family: var(--sans);
+      font-size: 0.58rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 8px 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    th:hover { color: var(--text); }
+    th.s-yellow { color: var(--accent); }
+    th.s-cyan   { color: var(--accent2); }
+    th.s-orange { color: var(--accent3); }
+
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+    tbody tr:hover { background: #161616; }
+    td { padding: 12px 12px; vertical-align: middle; }
+    td.hi-yellow { color: var(--accent); white-space: nowrap; }
+    td.hi-cyan   { color: var(--accent2); }
+    td.hi-orange { color: var(--accent3); }
+    td.dim       { color: #888; font-size: 0.76rem; max-width: 220px; }
+    td.mid       { color: #bbb; }
+    td.dt        { color: var(--muted); white-space: nowrap; }
+    td.nw        { white-space: nowrap; }
+
+    .btn-edit {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      font-family: var(--mono); font-size: 0.66rem; padding: 3px 7px;
+      cursor: pointer; transition: border-color 0.15s, color 0.15s; margin-right: 5px;
+    }
+    .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-del {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      font-family: var(--mono); font-size: 0.66rem; padding: 3px 7px;
+      cursor: pointer; transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-del:hover { border-color: var(--danger); color: var(--danger); }
+
+    .empty {
+      padding: 56px 0; text-align: center; color: var(--muted);
+      font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.1em;
+      border: 1px dashed var(--border);
+    }
+    .empty .icon { display: block; font-size: 1.8rem; margin-bottom: 12px; opacity: .25; }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.84); z-index: 100;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--surface); border: 1px solid var(--border);
+      width: 100%; max-width: 660px; padding: 30px 32px;
+      animation: slideUp 0.16s ease;
+    }
+    .modal-box.yellow { border-top: 2px solid var(--accent); }
+    .modal-box.cyan   { border-top: 2px solid var(--accent2); }
+    .modal-box.orange { border-top: 2px solid var(--accent3); }
+    @keyframes slideUp {
+      from { transform: translateY(14px); opacity: 0; }
+      to   { transform: translateY(0);   opacity: 1; }
+    }
+    .modal-box h2 {
+      font-family: var(--mono); font-size: 0.62rem;
+      letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 22px;
+    }
+    .modal-box.yellow h2 { color: var(--accent); }
+    .modal-box.cyan h2   { color: var(--accent2); }
+    .modal-box.orange h2 { color: var(--accent3); }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+    .modal-grid .field.wide { grid-column: 1 / -1; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--accent); color: #000;
+      font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em;
+      padding: 9px 16px; opacity: 0; pointer-events: none;
+      transition: opacity 0.22s; z-index: 200;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>VEHICLE<br/><span>TRACKER</span></h1>
+  <div class="subtitle">Maintenance &amp; Parts Log</div>
+</div>
+
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="repairs"  onclick="switchTab('repairs')"><span class="tab-pip"></span>Repairs &amp; Parts</button>
+  <button class="tab-btn"        data-tab="services" onclick="switchTab('services')"><span class="tab-pip"></span>Fluids &amp; Services</button>
+  <button class="tab-btn"        data-tab="tools"    onclick="switchTab('tools')"><span class="tab-pip"></span>Tools</button>
+</nav>
+
+
+<!-- ══════════════════════════════════════════════════
+     PAGE 1 — REPAIRS & PARTS
+══════════════════════════════════════════════════ -->
+<div id="page-repairs" class="page active">
+  <div class="summary-bar">
+    <div class="summary-stat"><div class="val" id="r-total">$0.00</div><div class="lbl">Total Spent</div></div>
+    <div class="summary-stat"><div class="val" id="r-count">0</div><div class="lbl">Entries</div></div>
+  </div>
+
+  <div class="form-card">
+    <h2>// New Repair / Part</h2>
+    <div class="form-grid">
+      <div class="field"><label for="r-part">Part Number</label><input id="r-part" type="text" placeholder="e.g. 12345-AA"/></div>
+      <div class="field"><label for="r-name">Part Name</label><input id="r-name" type="text" placeholder="e.g. Brake Rotor"/></div>
+      <div class="field"><label for="r-shop">Shop / Vendor</label><input id="r-shop" type="text" placeholder="e.g. AutoZone"/></div>
+      <div class="field"><label for="r-price">Price ($)</label><input id="r-price" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+      <div class="field"><label for="r-date">Date</label><input id="r-date" type="date"/></div>
+      <div class="field wide"><label for="r-desc">Description / Notes</label><textarea id="r-desc" placeholder="What was repaired or replaced?"></textarea></div>
+    </div>
+    <button class="btn-primary" onclick="R.add()">+ Add Entry</button>
+  </div>
+
+  <div class="controls">
+    <input id="r-search" type="text" placeholder="Search…" oninput="R.render()"/>
+    <select id="r-sf" onchange="R.render()">
+      <option value="date">Sort: Date</option><option value="price">Sort: Price</option>
+      <option value="part">Sort: Part #</option><option value="name">Sort: Part Name</option>
+      <option value="shop">Sort: Shop</option>
+    </select>
+    <select id="r-sd" onchange="R.render()"><option value="desc">↓ Desc</option><option value="asc">↑ Asc</option></select>
+    <span class="rec-count" id="r-rc"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table id="r-table">
+      <thead><tr>
+        <th onclick="R.sortBy('part')">Part #</th>
+        <th onclick="R.sortBy('name')">Part Name</th>
+        <th onclick="R.sortBy('desc')">Description</th>
+        <th onclick="R.sortBy('shop')">Shop</th>
+        <th onclick="R.sortBy('price')">Price</th>
+        <th onclick="R.sortBy('date')">Date</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="r-body"></tbody>
+    </table>
+    <div class="empty" id="r-empty" style="display:none"><span class="icon">🔧</span>NO REPAIRS LOGGED YET</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     PAGE 2 — FLUIDS & SERVICES
+══════════════════════════════════════════════════ -->
+<div id="page-services" class="page">
+  <div class="summary-bar">
+    <div class="summary-stat cyan"><div class="val" id="s-total">$0.00</div><div class="lbl">Total Spent</div></div>
+    <div class="summary-stat cyan"><div class="val" id="s-count">0</div><div class="lbl">Services</div></div>
+  </div>
+
+  <div class="form-card">
+    <h2>// New Fluid / Service</h2>
+    <div class="form-grid">
+      <div class="field">
+        <label for="s-type">Service Type</label>
+        <select id="s-type">
+          <option value="">— Select —</option>
+          <option>Oil Change</option><option>Coolant Flush</option><option>Transmission Fluid</option>
+          <option>Brake Fluid</option><option>Power Steering Fluid</option><option>Differential Fluid</option>
+          <option>Transfer Case Fluid</option><option>Fuel System Service</option><option>Air Filter</option>
+          <option>Cabin Air Filter</option><option>Spark Plugs</option><option>Tire Rotation</option>
+          <option>Wheel Alignment</option><option>Battery Service</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label for="s-location">Shop / Location</label><input id="s-location" type="text" placeholder="e.g. Jiffy Lube"/></div>
+      <div class="field"><label for="s-cost">Cost ($)</label><input id="s-cost" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+      <div class="field"><label for="s-date">Date</label><input id="s-date" type="date"/></div>
+      <div class="field"><label for="s-mileage">Mileage</label><input id="s-mileage" type="number" min="0" placeholder="e.g. 85000"/></div>
+      <div class="field wide"><label for="s-parts">Parts Replaced</label><input id="s-parts" type="text" placeholder="e.g. oil filter, drain plug washer"/></div>
+      <div class="field wide"><label for="s-notes">Notes</label><textarea id="s-notes" placeholder="Additional details…"></textarea></div>
+    </div>
+    <button class="btn-primary cyan" onclick="S.add()">+ Add Service</button>
+  </div>
+
+  <div class="controls">
+    <input id="s-search" type="text" placeholder="Search…" oninput="S.render()"/>
+    <select id="s-sf" onchange="S.render()">
+      <option value="date">Sort: Date</option><option value="cost">Sort: Cost</option>
+      <option value="type">Sort: Type</option><option value="location">Sort: Location</option>
+      <option value="mileage">Sort: Mileage</option>
+    </select>
+    <select id="s-sd" onchange="S.render()"><option value="desc">↓ Desc</option><option value="asc">↑ Asc</option></select>
+    <span class="rec-count" id="s-rc"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table id="s-table">
+      <thead class="cyan"><tr>
+        <th onclick="S.sortBy('type')">Service Type</th>
+        <th onclick="S.sortBy('parts')">Parts Replaced</th>
+        <th onclick="S.sortBy('date')">Date</th>
+        <th onclick="S.sortBy('mileage')">Mileage</th>
+        <th onclick="S.sortBy('cost')">Cost</th>
+        <th onclick="S.sortBy('location')">Location</th>
+        <th onclick="S.sortBy('notes')">Notes</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="s-body"></tbody>
+    </table>
+    <div class="empty" id="s-empty" style="display:none"><span class="icon">🛢️</span>NO SERVICES LOGGED YET</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     PAGE 3 — TOOLS
+══════════════════════════════════════════════════ -->
+<div id="page-tools" class="page">
+  <div class="summary-bar">
+    <div class="summary-stat orange"><div class="val" id="t-count">0</div><div class="lbl">Tools</div></div>
+    <div class="summary-stat orange"><div class="val" id="t-total">$0.00</div><div class="lbl">Total Value</div></div>
+  </div>
+
+  <div class="form-card">
+    <h2>// New Tool</h2>
+    <div class="form-grid">
+      <div class="field"><label for="t-name">Tool Name</label><input id="t-name" type="text" placeholder="e.g. Torque Wrench"/></div>
+      <div class="field"><label for="t-brand">Brand</label><input id="t-brand" type="text" placeholder="e.g. Snap-on"/></div>
+      <div class="field"><label for="t-model">Model / SKU</label><input id="t-model" type="text" placeholder="e.g. QD2R100"/></div>
+      <div class="field"><label for="t-price">Price ($)</label><input id="t-price" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+      <div class="field"><label for="t-loc">Storage Location</label><input id="t-loc" type="text" placeholder="e.g. Red toolbox, top drawer"/></div>
+      <div class="field wide"><label for="t-desc">Description</label><textarea id="t-desc" placeholder="Specs, range, notes…"></textarea></div>
+    </div>
+    <button class="btn-primary orange" onclick="T.add()">+ Add Tool</button>
+  </div>
+
+  <div class="controls">
+    <input id="t-search" type="text" placeholder="Search…" oninput="T.render()"/>
+    <select id="t-sf" onchange="T.render()">
+      <option value="name">Sort: Name</option><option value="brand">Sort: Brand</option>
+      <option value="price">Sort: Price</option><option value="loc">Sort: Location</option>
+    </select>
+    <select id="t-sd" onchange="T.render()"><option value="asc">↑ Asc</option><option value="desc">↓ Desc</option></select>
+    <span class="rec-count" id="t-rc"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table id="t-table">
+      <thead class="orange"><tr>
+        <th onclick="T.sortBy('name')">Name</th>
+        <th onclick="T.sortBy('brand')">Brand</th>
+        <th onclick="T.sortBy('model')">Model / SKU</th>
+        <th onclick="T.sortBy('desc')">Description</th>
+        <th onclick="T.sortBy('price')">Price</th>
+        <th onclick="T.sortBy('loc')">Location</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="t-body"></tbody>
+    </table>
+    <div class="empty" id="t-empty" style="display:none"><span class="icon">🔩</span>NO TOOLS LOGGED YET</div>
+  </div>
+</div>
+
+
+<!-- MODALS -->
+<div id="rm-overlay" class="modal-overlay" onclick="if(event.target===this)closeModal('rm-overlay')">
+  <div class="modal-box yellow">
+    <h2>// Edit Repair Entry</h2>
+    <div class="modal-grid">
+      <div class="field"><label for="rm-part">Part Number</label><input id="rm-part" type="text"/></div>
+      <div class="field"><label for="rm-name">Part Name</label><input id="rm-name" type="text"/></div>
+      <div class="field"><label for="rm-shop">Shop / Vendor</label><input id="rm-shop" type="text"/></div>
+      <div class="field"><label for="rm-price">Price ($)</label><input id="rm-price" type="number" min="0" step="0.01"/></div>
+      <div class="field"><label for="rm-date">Date</label><input id="rm-date" type="date"/></div>
+      <div class="field wide"><label for="rm-desc">Description</label><textarea id="rm-desc"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('rm-overlay')">Cancel</button>
+      <button class="btn-primary" onclick="R.saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="sm-overlay" class="modal-overlay" onclick="if(event.target===this)closeModal('sm-overlay')">
+  <div class="modal-box cyan">
+    <h2>// Edit Service Entry</h2>
+    <div class="modal-grid">
+      <div class="field">
+        <label for="sm-type">Service Type</label>
+        <select id="sm-type">
+          <option value="">— Select —</option>
+          <option>Oil Change</option><option>Coolant Flush</option><option>Transmission Fluid</option>
+          <option>Brake Fluid</option><option>Power Steering Fluid</option><option>Differential Fluid</option>
+          <option>Transfer Case Fluid</option><option>Fuel System Service</option><option>Air Filter</option>
+          <option>Cabin Air Filter</option><option>Spark Plugs</option><option>Tire Rotation</option>
+          <option>Wheel Alignment</option><option>Battery Service</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label for="sm-location">Location</label><input id="sm-location" type="text"/></div>
+      <div class="field"><label for="sm-cost">Cost ($)</label><input id="sm-cost" type="number" min="0" step="0.01"/></div>
+      <div class="field"><label for="sm-date">Date</label><input id="sm-date" type="date"/></div>
+      <div class="field"><label for="sm-mileage">Mileage</label><input id="sm-mileage" type="number" min="0"/></div>
+      <div class="field wide"><label for="sm-parts">Parts Replaced</label><input id="sm-parts" type="text"/></div>
+      <div class="field wide"><label for="sm-notes">Notes</label><textarea id="sm-notes"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('sm-overlay')">Cancel</button>
+      <button class="btn-primary cyan" onclick="S.saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="tm-overlay" class="modal-overlay" onclick="if(event.target===this)closeModal('tm-overlay')">
+  <div class="modal-box orange">
+    <h2>// Edit Tool</h2>
+    <div class="modal-grid">
+      <div class="field"><label for="tm-name">Tool Name</label><input id="tm-name" type="text"/></div>
+      <div class="field"><label for="tm-brand">Brand</label><input id="tm-brand" type="text"/></div>
+      <div class="field"><label for="tm-model">Model / SKU</label><input id="tm-model" type="text"/></div>
+      <div class="field"><label for="tm-price">Price ($)</label><input id="tm-price" type="number" min="0" step="0.01"/></div>
+      <div class="field"><label for="tm-loc">Storage Location</label><input id="tm-loc" type="text"/></div>
+      <div class="field wide"><label for="tm-desc">Description</label><textarea id="tm-desc"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('tm-overlay')">Cancel</button>
+      <button class="btn-primary orange" onclick="T.saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   SEED DATA — all 19 existing repair entries
+═══════════════════════════════════════════ */
+const SEED_REPAIRS = [
+  { id:'mp2qtgk0su8j', part:'Battery 34-T',       name:'Battery',                  shop:'Auto Zone',           price:110.00,  date:'2026-04-22', desc:'Purchased at Auto Zone. TotalPro Group Size 34 Battery 34-T' },
+  { id:'mp2qoyn1wg1c', part:'12611587',            name:'Water Pump Pulley',         shop:'GM GENUINE',          price:38.79,   date:'2026-04-13', desc:'Purchased at Rock Auto' },
+  { id:'mp2qvtme4bxp', part:'252-962',             name:'Water Pump',                shop:'ACDelco',             price:95.78,   date:'2026-04-09', desc:'Purchased at Amazon. ACDelco Gold 252-962 (19325605) Engine Water Pump.' },
+  { id:'mp2qxmf161mk', part:'38397',               name:'Tensioner Pulley',          shop:'ACDelco',             price:81.78,   date:'2026-04-01', desc:'Purchased at Amazon. ACDelco Gold 38397 (19163993) Drive Belt Tensioner Assembly with Pulley' },
+  { id:'mp2qyzyfbwda', part:'36110',               name:'Idler Pulley',              shop:'ACDelco',             price:38.69,   date:'2026-04-01', desc:'Purchased at Amazon. ACDelco Gold 36110 (19253073) Idler Pulley with Bolt, Dust Shield, and Spacer' },
+  { id:'mp2qkwjnok1d', part:'ADAKIT001',           name:'AC Actuator',               shop:'DORMAN',              price:54.89,   date:'2025-06-21', desc:'Purchased at Rock Auto. 2 Blend Door Actuators; 1 Mode Door Actuator; 1 Recirculation Door Actuator' },
+  { id:'mp2rbtt5ovv7', part:'N/A',                 name:'LED Headlights',            shop:'Lightening Dark',     price:21.99,   date:'2025-04-30', desc:'Purchased at Amazon. H11 Light Bulb, H8 H9 H11 Fog Bulbs 6500K Xenon White Extremely Bright Wireless Fanless (Pack of 2)' },
+  { id:'mp2rcvhl106f', part:'22929716',            name:'Battery Cable Assembly',    shop:'GM',                  price:128.62,  date:'2025-04-30', desc:'Purchased at Amazon. GM Genuine Parts 22929716 Positive and Negative Battery Cable Assembly' },
+  { id:'mp2qdenfozeq', part:'252962',              name:'Water Pump',                shop:'ACDELCO',             price:88.79,   date:'2025-04-23', desc:'Purchased from Rock Auto. 24 month warrantee.' },
+  { id:'mp2qfzgw3oa0', part:'QC1159',              name:'Brake Pads',                shop:'WAGNER',              price:42.79,   date:'2025-04-23', desc:'Purchased from Rock Auto. Thermoquiet; Ceramic; Includes Pad Installation Hardware - 24 month warrantee.' },
+  { id:'mp2rfr7bentb', part:'6PK1905',             name:'Serpentine Belt',           shop:'Bando',               price:11.68,   date:'2024-05-31', desc:'Purchased at Amazon. Bando USA 6PK1905 OEM Quality Serpentine Belt' },
+  { id:'mp2vlpyuzgb7', part:'12630279',            name:'PVC Tube',                  shop:'GM',                  price:11.21,   date:'2023-09-16', desc:'Purchased at Amazon. GM Genuine Parts 12630279 Positive Crankcase Ventilation (PCV) Tube' },
+  { id:'mp2vmzzg69bn', part:'MMBCC-CBTWO-XLBK',   name:'Oil Catch Can',             shop:'Mishimoto',           price:146.65,  date:'2023-08-27', desc:'Purchased at Amazon. Mishimoto MMBCC-CBTWO-XLBK XL Baffled Oil Catch Can, 2-Port' },
+  { id:'mp2vthi941l2', part:'34163S',              name:'Thermostat',                shop:'Gates',               price:32.32,   date:'2023-08-17', desc:'Purchased at Amazon. Gates - 34163S Thermostat' },
+  { id:'mp2vutccjz3m', part:'12681140',            name:'Thermostat Housing Gasket', shop:'GM',                  price:6.43,    date:'2023-08-17', desc:'Purchased at Amazon. GM Genuine Parts 12681140 Engine Coolant Thermostat Housing Gasket' },
+  { id:'mp2vxjp81th5', part:'1320306',             name:'DS Mirror',                 shop:'GM',                  price:43.56,   date:'2023-05-09', desc:'Purchased at Amazon. Driver Side Mirror Assembly Electric Adjustment Non-Heated No Memory Black Compatible with 2006-2013 Chevrolet Impala 2014-2016 Impala Limited GM1320306' },
+  { id:'mp2w5x1b9w5j', part:'10504',               name:'Locking Gas Cap',           shop:'Allmotorparts Direct',price:16.99,   date:'2021-05-12', desc:'Purchased at Amazon. Locking Gas Cap, Lock Fuel Cap Replace 10504 Compatible with Toyota 4Runner, FJ Cruiser, Tacoma, Tundra, Acura, Chevy Camaro, Honda CRV, Infiniti, Isuzu, Mazda, Nissan, Buick, Cadillac, GMC, More' },
+  { id:'mp2w7uxq66et', part:'GB70',                name:'Jump Starter',              shop:'NOCO',                price:178.97,  date:'2019-05-07', desc:'Purchased at Amazon. NOCO Boost GB70: 2000A UltraSafe Jump Starter - 12V Lithium Battery Booster Pack, Portable Jump Box, Power Bank & Jumper Cables - for 8.0L Gas and 6.0L Diesel Engines' },
+  { id:'mp2w8o6995dr', part:'XGC4',                name:'AC Adapter',                shop:'NOCO',                price:33.66,   date:'2019-05-07', desc:'Purchased at Amazon. NOCO XGC4 56W XGC Power Adapter' },
+];
+
+/* ═══════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════ */
+function uid()  { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function gv(id) { return document.getElementById(id).value.trim(); }
+function gn(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function sv(id, val) { document.getElementById(id).value = val ?? ''; }
+function dash() { return '<span style="color:var(--muted)">—</span>'; }
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(n) { return '$'+(+n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,dy] = d.split('-');
+  return `${m}/${dy}/${y}`;
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape')
+    document.querySelectorAll('.modal-overlay.open').forEach(o => o.classList.remove('open'));
+});
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById(`page-${tab}`).classList.add('active');
+}
+
+/* Generic localStorage store with seed support */
+function makeStore(key, seed) {
+  function load() {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw);
+      // First run: seed from existing data and save
+      if (seed && seed.length) { localStorage.setItem(key, JSON.stringify(seed)); return seed; }
+      return [];
+    } catch { return seed || []; }
+  }
+  function save(d) { localStorage.setItem(key, JSON.stringify(d)); }
+  return { load, save };
+}
+
+/* ═══════════════════════════════════════════
+   REPAIRS MODULE
+═══════════════════════════════════════════ */
+const R = (() => {
+  const store = makeStore('vt_repairs_v1', SEED_REPAIRS);
+  let data = store.load();
+  let editId = null;
+
+  document.getElementById('r-date').valueAsDate = new Date();
+
+  function add() {
+    const part = gv('r-part'), name = gv('r-name'), shop = gv('r-shop');
+    const price = gn('r-price'), date = document.getElementById('r-date').value, desc = gv('r-desc');
+    if (!part && !name && !desc) { toast('Enter at least a part #, name, or description.'); return; }
+    data.push({ id: uid(), part, name, shop, price, date, desc });
+    store.save(data); render(); toast('Repair entry added.');
+    ['r-part','r-name','r-shop','r-price','r-desc'].forEach(id => sv(id,''));
+  }
+
+  function del(id) {
+    if (!confirm('Delete this entry?')) return;
+    data = data.filter(e => e.id !== id);
+    store.save(data); render(); toast('Entry deleted.');
+  }
+
+  function openEdit(id) {
+    const e = data.find(x => x.id === id); if (!e) return;
+    editId = id;
+    sv('rm-part', e.part); sv('rm-name', e.name); sv('rm-shop', e.shop);
+    sv('rm-price', e.price); sv('rm-date', e.date); sv('rm-desc', e.desc);
+    openModal('rm-overlay');
+  }
+
+  function saveEdit() {
+    const idx = data.findIndex(e => e.id === editId); if (idx < 0) return;
+    data[idx] = { id: editId, part: gv('rm-part'), name: gv('rm-name'), shop: gv('rm-shop'),
+      price: gn('rm-price'), date: document.getElementById('rm-date').value, desc: gv('rm-desc') };
+    store.save(data); render(); closeModal('rm-overlay'); toast('Entry updated.');
+  }
+
+  function sortBy(field) {
+    const sf = document.getElementById('r-sf'), sd = document.getElementById('r-sd');
+    sf.value === field ? (sd.value = sd.value === 'asc' ? 'desc' : 'asc') : (sf.value = field);
+    render();
+  }
+
+  function render() {
+    const q = document.getElementById('r-search').value.toLowerCase();
+    const sf = document.getElementById('r-sf').value, sd = document.getElementById('r-sd').value;
+    let vis = data.filter(e =>
+      (e.part||'').toLowerCase().includes(q)||(e.name||'').toLowerCase().includes(q)||
+      (e.shop||'').toLowerCase().includes(q)||(e.desc||'').toLowerCase().includes(q));
+    vis.sort((a,b)=>{
+      let av=a[sf]??'', bv=b[sf]??'';
+      if(sf==='price'){av=+av;bv=+bv;}
+      return av<bv?(sd==='asc'?-1:1):av>bv?(sd==='asc'?1:-1):0;
+    });
+    const tbody = document.getElementById('r-body');
+    tbody.innerHTML = '';
+    vis.forEach(e => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="hi-yellow">${esc(e.part)||dash()}</td>
+        <td class="mid">${esc(e.name)||dash()}</td>
+        <td class="dim">${esc(e.desc)||dash()}</td>
+        <td class="mid">${esc(e.shop)||dash()}</td>
+        <td class="nw">${fmt(e.price)}</td>
+        <td class="dt">${fmtDate(e.date)}</td>
+        <td><button class="btn-edit" onclick="R.openEdit('${e.id}')">EDIT</button><button class="btn-del" onclick="R.del('${e.id}')">DEL</button></td>`;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('r-table').style.display = vis.length ? '' : 'none';
+    document.getElementById('r-empty').style.display  = vis.length ? 'none' : '';
+    document.getElementById('r-total').textContent = fmt(data.reduce((s,e)=>s+(+e.price||0),0));
+    document.getElementById('r-count').textContent = data.length;
+    document.getElementById('r-rc').textContent    = q ? `${vis.length} of ${data.length} shown` : '';
+  }
+
+  return { add, del, openEdit, saveEdit, sortBy, render };
+})();
+
+
+/* ═══════════════════════════════════════════
+   SERVICES MODULE
+═══════════════════════════════════════════ */
+const S = (() => {
+  const store = makeStore('vt_services_v1', []);
+  let data = store.load();
+  let editId = null;
+
+  document.getElementById('s-date').valueAsDate = new Date();
+
+  function add() {
+    const type = gv('s-type'), location = gv('s-location'), cost = gn('s-cost');
+    const date = document.getElementById('s-date').value;
+    const mileage = gv('s-mileage'), parts = gv('s-parts'), notes = gv('s-notes');
+    if (!type && !notes) { toast('Enter at least a service type or notes.'); return; }
+    data.push({ id: uid(), type, location, cost, date, mileage, parts, notes });
+    store.save(data); render(); toast('Service entry added.');
+    ['s-type','s-location','s-cost','s-mileage','s-parts','s-notes'].forEach(id => sv(id,''));
+  }
+
+  function del(id) {
+    if (!confirm('Delete this service entry?')) return;
+    data = data.filter(e => e.id !== id);
+    store.save(data); render(); toast('Entry deleted.');
+  }
+
+  function openEdit(id) {
+    const e = data.find(x => x.id === id); if (!e) return;
+    editId = id;
+    sv('sm-type', e.type); sv('sm-location', e.location); sv('sm-cost', e.cost);
+    sv('sm-date', e.date); sv('sm-mileage', e.mileage); sv('sm-parts', e.parts); sv('sm-notes', e.notes);
+    openModal('sm-overlay');
+  }
+
+  function saveEdit() {
+    const idx = data.findIndex(e => e.id === editId); if (idx < 0) return;
+    data[idx] = { id: editId, type: gv('sm-type'), location: gv('sm-location'),
+      cost: gn('sm-cost'), date: document.getElementById('sm-date').value,
+      mileage: gv('sm-mileage'), parts: gv('sm-parts'), notes: gv('sm-notes') };
+    store.save(data); render(); closeModal('sm-overlay'); toast('Service updated.');
+  }
+
+  function sortBy(field) {
+    const sf = document.getElementById('s-sf'), sd = document.getElementById('s-sd');
+    sf.value === field ? (sd.value = sd.value === 'asc' ? 'desc' : 'asc') : (sf.value = field);
+    render();
+  }
+
+  function render() {
+    const q = document.getElementById('s-search').value.toLowerCase();
+    const sf = document.getElementById('s-sf').value, sd = document.getElementById('s-sd').value;
+    let vis = data.filter(e =>
+      (e.type||'').toLowerCase().includes(q)||(e.location||'').toLowerCase().includes(q)||
+      (e.parts||'').toLowerCase().includes(q)||(e.notes||'').toLowerCase().includes(q));
+    vis.sort((a,b)=>{
+      let av=a[sf]??'', bv=b[sf]??'';
+      if(sf==='cost'||sf==='mileage'){av=+av;bv=+bv;}
+      return av<bv?(sd==='asc'?-1:1):av>bv?(sd==='asc'?1:-1):0;
+    });
+    const tbody = document.getElementById('s-body');
+    tbody.innerHTML = '';
+    vis.forEach(e => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="hi-cyan nw">${esc(e.type)||dash()}</td>
+        <td class="mid">${esc(e.parts)||dash()}</td>
+        <td class="dt">${fmtDate(e.date)}</td>
+        <td class="mid nw">${e.mileage?(+e.mileage).toLocaleString()+' mi':dash()}</td>
+        <td class="nw">${fmt(e.cost)}</td>
+        <td class="mid nw">${esc(e.location)||dash()}</td>
+        <td class="dim">${esc(e.notes)||dash()}</td>
+        <td><button class="btn-edit" onclick="S.openEdit('${e.id}')">EDIT</button><button class="btn-del" onclick="S.del('${e.id}')">DEL</button></td>`;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('s-table').style.display = vis.length ? '' : 'none';
+    document.getElementById('s-empty').style.display  = vis.length ? 'none' : '';
+    document.getElementById('s-total').textContent = fmt(data.reduce((s,e)=>s+(+e.cost||0),0));
+    document.getElementById('s-count').textContent = data.length;
+    document.getElementById('s-rc').textContent    = q ? `${vis.length} of ${data.length} shown` : '';
+  }
+
+  return { add, del, openEdit, saveEdit, sortBy, render };
+})();
+
+
+/* ═══════════════════════════════════════════
+   TOOLS MODULE
+═══════════════════════════════════════════ */
+const T = (() => {
+  const store = makeStore('vt_tools_v1', []);
+  let data = store.load();
+  let editId = null;
+
+  function add() {
+    const name = gv('t-name'), brand = gv('t-brand'), model = gv('t-model');
+    const price = gn('t-price'), loc = gv('t-loc'), desc = gv('t-desc');
+    if (!name && !brand) { toast('Enter at least a tool name or brand.'); return; }
+    data.push({ id: uid(), name, brand, model, price, loc, desc });
+    store.save(data); render(); toast('Tool added.');
+    ['t-name','t-brand','t-model','t-price','t-loc','t-desc'].forEach(id => sv(id,''));
+  }
+
+  function del(id) {
+    if (!confirm('Delete this tool?')) return;
+    data = data.filter(e => e.id !== id);
+    store.save(data); render(); toast('Tool deleted.');
+  }
+
+  function openEdit(id) {
+    const e = data.find(x => x.id === id); if (!e) return;
+    editId = id;
+    sv('tm-name', e.name); sv('tm-brand', e.brand); sv('tm-model', e.model);
+    sv('tm-price', e.price); sv('tm-loc', e.loc); sv('tm-desc', e.desc);
+    openModal('tm-overlay');
+  }
+
+  function saveEdit() {
+    const idx = data.findIndex(e => e.id === editId); if (idx < 0) return;
+    data[idx] = { id: editId, name: gv('tm-name'), brand: gv('tm-brand'), model: gv('tm-model'),
+      price: gn('tm-price'), loc: gv('tm-loc'), desc: gv('tm-desc') };
+    store.save(data); render(); closeModal('tm-overlay'); toast('Tool updated.');
+  }
+
+  function sortBy(field) {
+    const sf = document.getElementById('t-sf'), sd = document.getElementById('t-sd');
+    sf.value === field ? (sd.value = sd.value === 'asc' ? 'desc' : 'asc') : (sf.value = field);
+    render();
+  }
+
+  function render() {
+    const q = document.getElementById('t-search').value.toLowerCase();
+    const sf = document.getElementById('t-sf').value, sd = document.getElementById('t-sd').value;
+    let vis = data.filter(e =>
+      (e.name||'').toLowerCase().includes(q)||(e.brand||'').toLowerCase().includes(q)||
+      (e.model||'').toLowerCase().includes(q)||(e.desc||'').toLowerCase().includes(q)||
+      (e.loc||'').toLowerCase().includes(q));
+    vis.sort((a,b)=>{
+      let av=a[sf]??'', bv=b[sf]??'';
+      if(sf==='price'){av=+av;bv=+bv;}
+      return av<bv?(sd==='asc'?-1:1):av>bv?(sd==='asc'?1:-1):0;
+    });
+    const tbody = document.getElementById('t-body');
+    tbody.innerHTML = '';
+    vis.forEach(e => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="hi-orange">${esc(e.name)||dash()}</td>
+        <td class="mid">${esc(e.brand)||dash()}</td>
+        <td class="mid">${esc(e.model)||dash()}</td>
+        <td class="dim">${esc(e.desc)||dash()}</td>
+        <td class="nw">${e.price?fmt(e.price):dash()}</td>
+        <td class="mid">${esc(e.loc)||dash()}</td>
+        <td><button class="btn-edit" onclick="T.openEdit('${e.id}')">EDIT</button><button class="btn-del" onclick="T.del('${e.id}')">DEL</button></td>`;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('t-table').style.display = vis.length ? '' : 'none';
+    document.getElementById('t-empty').style.display  = vis.length ? 'none' : '';
+    document.getElementById('t-total').textContent = fmt(data.reduce((s,e)=>s+(+e.price||0),0));
+    document.getElementById('t-count').textContent = data.length;
+    document.getElementById('t-rc').textContent    = q ? `${vis.length} of ${data.length} shown` : '';
+  }
+
+  return { add, del, openEdit, saveEdit, sortBy, render };
+})();
+
+R.render();
+S.render();
+T.render();
+</script>
+</body>
+</html>
